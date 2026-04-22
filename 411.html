@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semana 3 – Banco de Dados de Livros</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#1E6B3C;--verde-c:#27AE60;--verde-bg:#E8F8EF;
+  --azul:#1A5276;--azul-c:#2980B9;
+  --amarelo:#F39C12;--roxo:#7D3C98;
+  --vermelho:#C0392B;--laranja:#D35400;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:#f8f9ff;min-height:100vh;padding:16px;
+  background-image:radial-gradient(circle at 15% 50%,rgba(39,174,96,.06) 0%,transparent 40%),
+                   radial-gradient(circle at 85% 30%,rgba(125,60,152,.06) 0%,transparent 40%);}
+
+/* HUD */
+.hud{position:sticky;top:12px;z-index:100;background:white;border-radius:20px;
+  box-shadow:0 6px 30px rgba(0,0,0,.15);padding:14px 20px;margin-bottom:20px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:2px solid #f3e8ff;}
+.hud-pontos{display:flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--roxo),#9B59B6);
+  color:white;padding:8px 18px;border-radius:14px;font-family:'Fredoka One',cursive;font-size:18px;
+  box-shadow:0 3px 12px rgba(125,60,152,.35);}
+.hud-pontos.bump{animation:bump .4s ease;}
+@keyframes bump{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+.hud-barra-wrap{flex:1;min-width:120px;}
+.hud-label{font-size:11px;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.hud-barra{height:10px;background:#e2e8f0;border-radius:10px;overflow:hidden;}
+.hud-fill{height:100%;background:linear-gradient(90deg,#9B59B6,var(--roxo));border-radius:10px;transition:width .5s;}
+.hud-nota{font-family:'Fredoka One',cursive;font-size:28px;min-width:56px;text-align:center;
+  background:#f3e8ff;color:var(--roxo);border-radius:14px;padding:6px 14px;border:2px solid #d8b4fe;transition:all .4s;}
+.hud-nota.nota-baixa{color:var(--vermelho);background:#fee2e2;border-color:#fca5a5;}
+.hud-nota.nota-media{color:var(--amarelo);background:#fff3cd;border-color:#fde68a;}
+.hud-nota.nota-alta{color:var(--verde-c);background:#d1fae5;border-color:#6ee7b7;}
+.hud-info{font-size:12px;color:#888;text-align:right;}
+
+.topo{text-align:center;margin-bottom:24px;}
+.badge{display:inline-block;background:var(--roxo);color:white;font-family:'Fredoka One',cursive;font-size:13px;padding:5px 18px;border-radius:20px;margin-bottom:10px;}
+.topo h1{font-family:'Fredoka One',cursive;font-size:clamp(22px,5vw,36px);color:var(--roxo);}
+.topo p{color:#666;font-size:14px;margin-top:6px;}
+
+.card{background:white;border-radius:20px;padding:22px;margin-bottom:20px;box-shadow:0 4px 20px rgba(0,0,0,.07);}
+.card h2{font-family:'Fredoka One',cursive;font-size:18px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.card p{font-size:14px;color:#444;line-height:1.7;margin-bottom:8px;}
+.pts-badge{display:inline-flex;align-items:center;gap:4px;background:var(--amarelo);color:white;
+  font-family:'Fredoka One',cursive;font-size:12px;padding:3px 10px;border-radius:20px;}
+
+/* Formulário */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr;}}
+.fc{display:flex;flex-direction:column;gap:3px;}
+.fc label{font-size:11px;font-weight:800;color:var(--verde);text-transform:uppercase;letter-spacing:.5px;}
+.fc input,.fc select{border:2px solid #c8e6c9;border-radius:10px;padding:7px 10px;
+  font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:white;transition:border-color .2s;}
+.fc input:focus,.fc select:focus{border-color:var(--verde-c);}
+.estrelas{display:flex;gap:3px;margin-top:3px;}
+.est-btn{font-size:24px;cursor:pointer;background:none;border:none;padding:0;line-height:1;transition:transform .1s;}
+.est-btn:hover{transform:scale(1.3);}
+
+/* Tabela */
+.tb-wrap{overflow-x:auto;margin:10px 0;}
+.tb{width:100%;border-collapse:collapse;font-size:13px;}
+.tb thead th{background:var(--verde);color:white;padding:8px 10px;font-family:'Fredoka One',cursive;font-size:11px;white-space:nowrap;}
+.tb tbody td{border:1px solid #d1fae5;padding:7px 10px;vertical-align:middle;background:white;}
+.tb tbody tr:nth-child(even) td{background:#f0fff4;}
+.tb tbody tr:hover td{background:var(--verde-bg);}
+.pill{display:inline-block;background:var(--verde-bg);color:var(--verde);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:800;}
+
+/* Filtros */
+.filtros{display:flex;gap:8px;flex-wrap:wrap;background:var(--verde-bg);border-radius:12px;padding:12px;border:2px dashed #a7d7b4;margin-bottom:12px;}
+.fg{display:flex;flex-direction:column;gap:3px;flex:1;min-width:110px;}
+.fg label{font-size:10px;font-weight:800;color:var(--verde);text-transform:uppercase;}
+.fg select,.fg input{border:2px solid #c8e6c9;border-radius:8px;padding:6px 10px;font-family:'Nunito',sans-serif;font-size:12px;outline:none;background:white;}
+
+/* Consultas */
+.consulta-area{background:#e8f4fd;border:2px solid var(--azul-c);border-radius:14px;padding:14px;margin-top:12px;}
+.consulta-area h3{font-family:'Fredoka One',cursive;color:var(--azul-c);font-size:14px;margin-bottom:10px;}
+.cp{background:var(--azul-c);color:white;padding:9px 14px;border-radius:10px;font-size:13px;
+  font-weight:700;margin-bottom:6px;cursor:pointer;transition:opacity .2s;user-select:none;}
+.cp:hover{opacity:.85;}
+.cr{background:white;border-radius:8px;padding:8px 12px;font-size:12px;color:#333;
+  display:none;margin-bottom:6px;border-left:4px solid var(--verde-c);}
+.cr.show{display:block;animation:fadeIn .3s ease;}
+
+/* Questões */
+.questao{background:linear-gradient(135deg,#f5e6ff,#ede0ff);border-left:5px solid var(--roxo);
+  border-radius:0 14px 14px 0;padding:14px;margin-bottom:12px;}
+.questao p{color:#6b21a8;font-size:14px;font-weight:700;margin-bottom:10px;}
+.ops{display:flex;flex-direction:column;gap:6px;}
+.op{background:white;border:2px solid #d8b4fe;border-radius:10px;padding:8px 12px;
+  cursor:pointer;font-size:13px;color:#6b21a8;font-weight:600;transition:all .2s;text-align:left;}
+.op:hover{background:#f5e6ff;}
+.op.certa{background:#d1fae5;border-color:#10b981;color:#065f46;cursor:default;}
+.op.errada{background:#fee2e2;border-color:#ef4444;color:#991b1b;cursor:default;}
+.fb{font-size:13px;font-weight:700;padding:7px 12px;border-radius:10px;margin-top:7px;display:none;}
+.fb.ok{background:#d1fae5;color:#065f46;display:block;}
+.fb.nao{background:#fee2e2;color:#991b1b;display:block;}
+
+.btn{display:inline-flex;align-items:center;gap:5px;padding:9px 20px;border-radius:50px;border:none;
+  font-family:'Fredoka One',cursive;font-size:14px;cursor:pointer;transition:all .2s;margin-top:8px;margin-right:6px;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 5px 14px rgba(0,0,0,.14);}
+.btn-verde{background:var(--verde-c);color:white;}
+.btn-roxo{background:var(--roxo);color:white;}
+
+/* Nota final */
+.nota-final{display:none;margin-top:20px;border-radius:24px;padding:28px;text-align:center;
+  background:linear-gradient(135deg,var(--roxo),#9B59B6);box-shadow:0 10px 40px rgba(125,60,152,.4);}
+.nota-final.show{display:block;animation:popIn .6s ease;}
+.nf-num{font-family:'Fredoka One',cursive;font-size:68px;color:white;line-height:1;}
+.nf-label{font-family:'Fredoka One',cursive;font-size:20px;color:rgba(255,255,255,.9);margin:6px 0;}
+.nf-msg{font-size:14px;color:rgba(255,255,255,.8);margin-top:6px;}
+.nf-det{display:flex;justify-content:center;gap:12px;margin-top:14px;flex-wrap:wrap;}
+.nf-it{background:rgba(255,255,255,.2);border-radius:10px;padding:7px 14px;color:white;font-size:12px;font-weight:700;}
+
+@keyframes popIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.float-pts{position:fixed;pointer-events:none;font-family:'Fredoka One',cursive;font-size:22px;
+  color:var(--roxo);text-shadow:0 2px 8px rgba(0,0,0,.2);animation:floatUp .9s ease forwards;z-index:9999;}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-70px) scale(1.3)}}
+
+footer{text-align:center;color:#bbb;font-size:12px;margin-top:24px;padding-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-pontos" id="hud-pontos">🏅 0 pts</div>
+  <div class="hud-barra-wrap">
+    <div class="hud-label">Progresso da aula</div>
+    <div class="hud-barra"><div class="hud-fill" id="hud-fill" style="width:0%"></div></div>
+  </div>
+  <div><div class="hud-label">Nota</div><div class="hud-nota" id="hud-nota">—</div></div>
+  <div class="hud-info" id="hud-info">0 / 30 pontos</div>
+</div>
+
+<div class="topo">
+  <div class="badge">EF04CO02 · SEMANA 3</div>
+  <h1>📚 Banco de Dados de Livros!</h1>
+ </div>
+
+<!-- ═══ PARTE 1 – Adicionar livros (10 pts) ═══ -->
+<div class="card" style="border-left:6px solid var(--verde-c);">
+  <h2 style="color:var(--verde);">➕ Parte 1 – Monte o Banco de Dados!
+    <span class="pts-badge">⭐ até 10 pts</span>
+  </h2>
+  <p>Adicione <strong>pelo menos 3 livros</strong> ao banco de dados da turma. Cada livro completo (todos os campos) vale <strong>2 pts</strong> (máximo 5 livros = 10 pts).</p>
+
+  <div class="form-grid">
+    <div class="fc" style="grid-column:1/-1;"><label>📖 Título</label><input id="f-t" placeholder="Ex: O Pequeno Príncipe"></div>
+    <div class="fc"><label>✍️ Autor</label><input id="f-a" placeholder="Ex: Antoine de S.E."></div>
+    <div class="fc"><label>🏷️ Gênero</label>
+      <select id="f-g">
+        <option value="">Escolha...</option>
+        <option>Aventura</option><option>Fantasia</option><option>Ficção Científica</option>
+        <option>Romance</option><option>Terror</option><option>Humor</option>
+        <option>Poesia</option><option>Histórico</option><option>Outro</option>
+      </select>
+    </div>
+    <div class="fc"><label>📃 Páginas (aprox.)</label><input id="f-p" type="number" min="1" placeholder="Ex: 120"></div>
+    <div class="fc"><label>⭐ Nota</label>
+      <div class="estrelas" id="estrelas">
+        <button class="est-btn" onclick="setEst(1)">☆</button>
+        <button class="est-btn" onclick="setEst(2)">☆</button>
+        <button class="est-btn" onclick="setEst(3)">☆</button>
+        <button class="est-btn" onclick="setEst(4)">☆</button>
+        <button class="est-btn" onclick="setEst(5)">☆</button>
+      </div>
+    </div>
+  </div>
+  <button class="btn btn-verde" onclick="addLivro()">📚 Adicionar Livro!</button>
+  <div id="msg-add" style="font-size:12px;color:var(--verde);font-weight:700;margin-top:8px;display:none;"></div>
+  <div id="prog-livros" style="font-size:12px;color:#888;margin-top:6px;">0 livros adicionados (adicione até 5 para ganhar 10 pts)</div>
+</div>
+
+<!-- ═══ PARTE 2 – Consultas (10 pts) ═══ -->
+<div class="card" style="border-left:6px solid var(--roxo);">
+  <h2 style="color:var(--roxo);">🗃️ Parte 2 – Banco de Dados + Consultas
+    <span class="pts-badge" style="background:var(--roxo);">⭐ até 10 pts</span>
+  </h2>
+  <p>Filtre e consulte o banco de dados. Cada uma das <strong>3 consultas respondidas</strong> vale <strong>~3,3 pts</strong>!</p>
+
+  <div class="filtros">
+    <div class="fg"><label>🔍 Título</label><input id="ft" placeholder="Filtrar..." oninput="renderTb()"></div>
+    <div class="fg"><label>🏷️ Gênero</label>
+      <select id="fg" onchange="renderTb()">
+        <option value="">Todos</option>
+        <option>Aventura</option><option>Fantasia</option><option>Ficção Científica</option>
+        <option>Romance</option><option>Terror</option><option>Humor</option>
+        <option>Poesia</option><option>Histórico</option><option>Outro</option>
+      </select>
+    </div>
+    <div class="fg"><label>⭐ Nota mín.</label>
+      <select id="fn" onchange="renderTb()">
+        <option value="0">Qualquer</option>
+        <option value="3">3+</option><option value="4">4+</option><option value="5">5 ⭐</option>
+      </select>
+    </div>
+    <div class="fg"><label>📊 Ordenar</label>
+      <select id="fo" onchange="renderTb()">
+        <option value="titulo">Título A→Z</option>
+        <option value="nota">Nota ↓</option>
+        <option value="pag">Páginas ↑</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="tb-wrap">
+    <table class="tb"><thead><tr>
+      <th>#</th><th>📖 Título</th><th>✍️ Autor</th><th>🏷️ Gênero</th><th>📃 Pág.</th><th>⭐</th><th></th>
+    </tr></thead>
+    <tbody id="tb-body"></tbody></table>
+  </div>
+
+  <div class="consulta-area">
+    <h3>🎓 Consultas do Professor — clique e responda! (cada uma = 3,3 pts)</h3>
+    <div class="cp" onclick="consulta('c1',this)">"Quais livros têm 5 estrelas?"</div>
+    <div class="cr" id="c1"></div>
+    <div class="cp" onclick="consulta('c2',this)">"Quais livros são do gênero Fantasia?"</div>
+    <div class="cr" id="c2"></div>
+    <div class="cp" onclick="consulta('c3',this)">"Qual livro tem mais páginas?"</div>
+    <div class="cr" id="c3"></div>
+  </div>
+</div>
+
+<!-- ═══ PARTE 3 – Questões (10 pts) ═══ -->
+<div class="card" style="border-left:6px solid var(--azul-c);">
+  <h2 style="color:var(--azul-c);">🤔 Parte 3 – Questões
+    <span class="pts-badge" style="background:var(--azul-c);">⭐ até 10 pts</span>
+  </h2>
+  <p>São 3 questões. Q1 e Q2 valem <strong>3,3 pts</strong> cada; Q3 vale <strong>3,4 pts</strong>. Apenas <strong>1 tentativa</strong>!</p>
+
+  <div class="questao">
+    <p>🟣 Q1 <span style="font-size:11px;font-weight:400">(3,3 pts)</span> — O que é um <strong>banco de dados</strong>?</p>
+    <div class="ops" id="ops-q1">
+      <button class="op" onclick="resp(this,'q1',false)">A) Um computador especial de banco.</button>
+      <button class="op" onclick="resp(this,'q1',true)">B) Um conjunto organizado de registros que pode ser consultado e editado.</button>
+      <button class="op" onclick="resp(this,'q1',false)">C) Uma planilha com muitos números.</button>
+    </div>
+    <div class="fb" id="fb-q1"></div>
+  </div>
+
+  <div class="questao">
+    <p>🟣 Q2 <span style="font-size:11px;font-weight:400">(3,3 pts)</span> — Por que é mais fácil filtrar pelo campo "Gênero" do que ler ficha por ficha?</p>
+    <div class="ops" id="ops-q2">
+      <button class="op" onclick="resp(this,'q2',false)">A) Porque "Gênero" é sempre o primeiro campo.</button>
+      <button class="op" onclick="resp(this,'q2',true)">B) Porque o nome fixo do campo permite buscar diretamente, sem ler tudo.</button>
+      <button class="op" onclick="resp(this,'q2',false)">C) Porque fichas digitais são sempre mais rápidas.</button>
+    </div>
+    <div class="fb" id="fb-q2"></div>
+  </div>
+
+  <div class="questao">
+    <p>🟣 Q3 <span style="font-size:11px;font-weight:400">(3,4 pts)</span> — Uma lista de contatos no celular é um exemplo de:</p>
+    <div class="ops" id="ops-q3">
+      <button class="op" onclick="resp(this,'q3',false)">A) Matriz, porque está organizada em linhas.</button>
+      <button class="op" onclick="resp(this,'q3',true)">B) Banco de dados de registros, pois cada contato tem campos nomeados.</button>
+      <button class="op" onclick="resp(this,'q3',false)">C) Algoritmo, porque executa passos automaticamente.</button>
+    </div>
+    <div class="fb" id="fb-q3"></div>
+  </div>
+</div>
+
+<div class="nota-final" id="nota-final">
+  <div class="nf-num" id="nf-num">0,0</div>
+  <div class="nf-label" id="nf-label">Calculando...</div>
+  <div class="nf-msg" id="nf-msg"></div>
+  <div class="nf-det">
+    <div class="nf-it" id="nf-d1">Livros: 0/10</div>
+    <div class="nf-it" id="nf-d2">Consultas: 0/10</div>
+    <div class="nf-it" id="nf-d3">Questões: 0/10</div>
+  </div>
+</div>
+
+<footer>Material Pedagógico - Profª Adriana Bett Terebinto © 2026</footer>
+
+<script>
+const PONTOS_MAX = 30;
+let pts = {livros:0, consultas:0, questoes:0};
+let livros = [];
+let notaEst = 0;
+const resps = {};
+const consultasFeitas = new Set();
+
+// HUD
+function atualizarHUD(delta) {
+  if(delta>0) mostrarFloat(delta);
+  const total = pts.livros + pts.consultas + pts.questoes;
+  document.getElementById('hud-pontos').textContent = `🏅 ${total.toFixed(1)} pts`;
+  document.getElementById('hud-pontos').classList.remove('bump');
+  void document.getElementById('hud-pontos').offsetWidth;
+  document.getElementById('hud-pontos').classList.add('bump');
+  document.getElementById('hud-fill').style.width = Math.min(100,(total/PONTOS_MAX)*100)+'%';
+  document.getElementById('hud-info').textContent = `${total.toFixed(1)} / ${PONTOS_MAX} pontos`;
+  const nota = (total/PONTOS_MAX)*10;
+  const el = document.getElementById('hud-nota');
+  el.textContent = nota.toFixed(1);
+  el.className = 'hud-nota '+(nota<5?'nota-baixa':nota<7?'nota-media':'nota-alta');
+  verificarConclusao();
+}
+function mostrarFloat(delta) {
+  const el = document.createElement('div');
+  el.className='float-pts'; el.textContent=`+${typeof delta==='number'&&!Number.isInteger(delta)?delta.toFixed(1):delta}`;
+  el.style.left=(40+Math.random()*60)+'px'; el.style.top='80px';
+  document.body.appendChild(el); setTimeout(()=>el.remove(),1000);
+}
+
+// Estrelas
+function setEst(n) {
+  notaEst = n;
+  document.querySelectorAll('.est-btn').forEach((b,i)=>b.textContent=i<n?'⭐':'☆');
+}
+
+// Adicionar livro
+function addLivro() {
+  const t=document.getElementById('f-t').value.trim();
+  const a=document.getElementById('f-a').value.trim();
+  const g=document.getElementById('f-g').value;
+  const p=parseInt(document.getElementById('f-p').value)||100;
+  if(!t){alert('Digite o título! 📖');return;}
+  if(!a){alert('Digite o autor! ✍️');return;}
+  if(!g){alert('Escolha o gênero! 🏷️');return;}
+  if(!notaEst){alert('Dê uma nota! ⭐');return;}
+
+  livros.push({titulo:t,autor:a,genero:g,paginas:p,nota:notaEst});
+  document.getElementById('f-t').value='';
+  document.getElementById('f-a').value='';
+  document.getElementById('f-g').value='';
+  document.getElementById('f-p').value='';
+  setEst(0); notaEst=0;
+
+  const msg=document.getElementById('msg-add');
+  msg.textContent=`✅ "${t}" adicionado!`; msg.style.display='block';
+  setTimeout(()=>msg.style.display='none',2500);
+
+  const qtd = Math.min(livros.length, 5);
+  const novoPts = qtd * 2;
+  const delta = novoPts - pts.livros;
+  pts.livros = novoPts;
+  document.getElementById('prog-livros').textContent =
+    `${livros.length} livro${livros.length!==1?'s':''} adicionado${livros.length!==1?'s':''} — Pontos da Parte 1: ${pts.livros}/10`;
+  document.getElementById('nf-d1').textContent=`Livros: ${pts.livros}/10`;
+  atualizarHUD(delta);
+  renderTb();
+}
+
+// Tabela
+function renderTb() {
+  let d=[...livros];
+  const ft=document.getElementById('ft').value.toLowerCase();
+  const fg=document.getElementById('fg').value;
+  const fn=parseInt(document.getElementById('fn').value)||0;
+  const fo=document.getElementById('fo').value;
+  if(ft) d=d.filter(l=>l.titulo.toLowerCase().includes(ft));
+  if(fg) d=d.filter(l=>l.genero===fg);
+  if(fn) d=d.filter(l=>l.nota>=fn);
+  if(fo==='titulo') d.sort((a,b)=>a.titulo.localeCompare(b.titulo));
+  if(fo==='nota')   d.sort((a,b)=>b.nota-a.nota);
+  if(fo==='pag')    d.sort((a,b)=>a.paginas-b.paginas);
+
+  const tb = document.getElementById('tb-body');
+  if(!d.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:16px;color:#aaa;">Nenhum livro encontrado.</td></tr>'; return; }
+  tb.innerHTML = d.map((l,i)=>{
+    const ri=livros.indexOf(l);
+    return `<tr>
+      <td style="color:#aaa;font-size:11px">${i+1}</td>
+      <td><strong>${l.titulo}</strong></td>
+      <td>${l.autor}</td>
+      <td><span class="pill">${l.genero}</span></td>
+      <td style="text-align:center">${l.paginas}</td>
+      <td>${'⭐'.repeat(l.nota)+'☆'.repeat(5-l.nota)}</td>
+      <td><button onclick="delLivro(${ri})" style="background:none;border:none;cursor:pointer;font-size:15px;">🗑️</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function delLivro(i) {
+  if(confirm(`Remover "${livros[i].titulo}"?`)){
+    livros.splice(i,1);
+    const novoPts=Math.min(livros.length,5)*2;
+    pts.livros=novoPts;
+    document.getElementById('nf-d1').textContent=`Livros: ${pts.livros}/10`;
+    atualizarHUD(0);
+    renderTb();
+  }
+}
+
+// Consultas
+const PTS_CONS = [3.3, 3.3, 3.4];
+function consulta(id, btn) {
+  const el = document.getElementById(id);
+  let msg='';
+  if(livros.length===0){el.textContent='📭 Banco vazio! Adicione livros primeiro.';el.classList.add('show');return;}
+  if(id==='c1'){const r=livros.filter(l=>l.nota===5).map(l=>l.titulo);msg=r.length?`⭐⭐⭐⭐⭐ Livros com 5 estrelas: ${r.join(', ')}.`:'Nenhum livro com 5 estrelas ainda.';}
+  if(id==='c2'){const r=livros.filter(l=>l.genero==='Fantasia').map(l=>l.titulo);msg=r.length?`✨ Livros de Fantasia: ${r.join(', ')}.`:'Nenhum livro de Fantasia. Adicione um!';}
+  if(id==='c3'){const top=[...livros].sort((a,b)=>b.paginas-a.paginas)[0];msg=`📖 Mais páginas: "${top.titulo}" com ${top.paginas} pág.`;}
+  el.textContent=msg; el.classList.add('show');
+
+  const idx=['c1','c2','c3'].indexOf(id);
+  if(!consultasFeitas.has(id)){
+    consultasFeitas.add(id);
+    const vl=PTS_CONS[idx];
+    pts.consultas=parseFloat((pts.consultas+vl).toFixed(1));
+    document.getElementById('nf-d2').textContent=`Consultas: ${pts.consultas.toFixed(1)}/10`;
+    atualizarHUD(vl);
+  }
+}
+
+// Questões
+const PTS_Q = [3.3, 3.3, 3.4];
+function resp(btn, q, certa) {
+  if(resps[q])return; resps[q]=true;
+  const idx=parseInt(q.replace('q',''))-1;
+  document.getElementById('ops-'+q).querySelectorAll('.op').forEach(b=>b.disabled=true);
+  btn.classList.add(certa?'certa':'errada');
+  const fb=document.getElementById('fb-'+q);
+  if(certa){
+    fb.className='fb ok'; fb.textContent=`✅ Correto! +${PTS_Q[idx].toFixed(1)} pontos!`;
+    pts.questoes=parseFloat((pts.questoes+PTS_Q[idx]).toFixed(1));
+    document.getElementById('nf-d3').textContent=`Questões: ${pts.questoes.toFixed(1)}/10`;
+    atualizarHUD(PTS_Q[idx]);
+  } else {
+    fb.className='fb nao'; fb.textContent='❌ Incorreto. Veja a certa!';
+    document.getElementById('ops-'+q).querySelectorAll('.op').forEach(b=>{if(!b.classList.contains('errada'))b.classList.add('certa');});
+    atualizarHUD(0);
+  }
+}
+
+// Conclusão
+function verificarConclusao(){
+  const tudo = livros.length>=1 && consultasFeitas.size>=3 && resps['q1'] && resps['q2'] && resps['q3'];
+  if(tudo){
+    const total=pts.livros+pts.consultas+pts.questoes;
+    const nota=(total/PONTOS_MAX)*10;
+    const nf=document.getElementById('nota-final');
+    document.getElementById('nf-num').textContent=nota.toFixed(1);
+    let lbl,msg;
+    if(nota>=9){lbl='🏆 Excelente!';msg='Você dominou banco de dados!';nf.style.background='linear-gradient(135deg,#1E6B3C,#27AE60)';}
+    else if(nota>=7){lbl='😊 Muito Bom!';msg='Ótimo trabalho com os registros!';nf.style.background='linear-gradient(135deg,var(--roxo),#9B59B6)';}
+    else if(nota>=5){lbl='🙂 Bom!';msg='Você passou! Continue praticando.';nf.style.background='linear-gradient(135deg,#D35400,#E67E22)';}
+    else{lbl='😅 Continue!';msg='Revise e tente novamente!';nf.style.background='linear-gradient(135deg,#922B21,#C0392B)';}
+    document.getElementById('nf-label').textContent=lbl;
+    document.getElementById('nf-msg').textContent=msg;
+    nf.classList.add('show');
+    nf.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
+
+renderTb();
+</script>
+</body>
+</html>
